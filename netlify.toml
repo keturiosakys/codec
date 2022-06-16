@@ -18,3 +18,5 @@
   GOOGLE_SERVICE_ACCOUNT_EMAIL = "your google service account email address"
   GOOGLE_CLIENT_PRIVATE_KEY = "your google service account private key"
   MAPBOX_ACCESS_TOKEN = "your mapbox access token"
+  SUPABASE_KEY = "your supabase key"
+  SUPABASE_URL = "your supabase url"
