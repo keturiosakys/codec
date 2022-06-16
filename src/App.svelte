@@ -13,6 +13,7 @@
     filter_toggles,
     platform_config_store,
   } from "./stores/store";
+  import { localtoUTCdatetimeobj } from "./utils/utils";
 
   let mouse_xy = { x: 0, y: 0 };
   let handleMouseMove = throttle((event) => {
