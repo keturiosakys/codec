@@ -343,9 +343,11 @@
 
       .vis-custom-time.current_time_line {
         background-color: #d90c1e;
+        cursor: move;
         width: 5px;
         opacity: 0.5;
       }
+
 
       .triangle-up {
         width: 0;
