@@ -31,13 +31,35 @@
 
   onMount(() => {
     let fetch_interval = setInterval(fetch_google_sheet_data, 10000);
+    let fetch_interval = setInterval(fetch_all_data, 10000);
     return () => {
       clearInterval(fetch_interval);
     };
   });
 
+  async function fetch_platform_config() {
+        return await fetch("/.netlify/functions/supabase?table=config")
+            .then((response) => response.json())
+            .then((platform_config) => {
+                $platform_config_store = platform_config[0]; // this is an array, so we need to get the first element
+            });
+    }
 
+   async function fetch_events() {
+        return await fetch("/.netlify/functions/supabase?table=events")
+            .then((response) => response.json())
+            .then((events) => {
+                process_events_data(events);
+            });
+    }
 
+   async function fetch_media_assets() {
+        return await fetch("/.netlify/functions/supabase?table=media_assets")
+            .then((response) => response.json())
+            .then((media_assets) => {
+                process_media_assets_data(media_assets);
+            });
+    }
 
     // create array to feed data as being processed
     let events = [];
