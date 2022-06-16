@@ -8,3 +8,8 @@ async function getConfig() {
     // console.log(config, error);
     return { config, error };
 }
+
+async function getEvents() {
+    let { data: events, error } = await supabase.from("events").select("*");
+    return { events, error };
+}
