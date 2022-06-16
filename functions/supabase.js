@@ -13,3 +13,8 @@ async function getEvents() {
     let { data: events, error } = await supabase.from("events").select("*");
     return { events, error };
 }
+
+async function getMediaAssets() {
+    let { data: media_assets, error } = await supabase.from("media_assets").select("*");
+    return { media_assets, error };
+}
