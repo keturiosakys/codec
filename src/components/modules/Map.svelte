@@ -44,7 +44,7 @@
       bind:this={mapComponent}
       accessToken={MAPBOX_ACCESS_TOKEN}
       options={{
-        style: "mapbox://styles/situmapping/cl27sefh1000r15o2yvb5er0k",
+        style: "mapbox://styles/mapbox/dark-v10",
         center: [
           parseFloat($platform_config_store["Map start longitude"]),
           parseFloat($platform_config_store["Map start latitude"]),
