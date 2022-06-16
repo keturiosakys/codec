@@ -36,40 +36,8 @@
     };
   });
 
-  function fetch_google_sheet_data() {
-    return fetch(
-      `/.netlify/functions/googlesheets?sheet=platformconfig&offset=1`
-    )
-      .then((rows_string) => rows_string.json())
-      .then((platform_config) => {
-        $platform_config_store = platform_config;
-        fetch(
-          `/.netlify/functions/googlesheets?sheet=` +
-            platform_config["Title of tab with media assets"] +
-            `&offset=` +
-            platform_config["Rank of assets row with column names"]
-        )
-          .then((rows_string) => rows_string.json())
-          .then((media) => {
-            process_video_sheet_response(media);
-          });
 
-        fetch(
-          `/.netlify/functions/googlesheets?sheet=` +
-            platform_config["Title of tab with events"] +
-            `&offset=` +
-            platform_config["Rank of events row with column names"]
-        )
-          .then((rows_string) => rows_string.json())
-          .then((events) => {
-            process_event_sheet_response(events);
-          });
-      });
-  }
 
-  function process_event_sheet_response(rows) {
-    // first row of table is column names
-    let column_names = rows[0].map((col_name) => col_name.toLowerCase());
 
     // create array to feed data as being processed
     let events = [];
