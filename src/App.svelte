@@ -7,14 +7,11 @@
   import Modules from "./components/modules/Modules.svelte";
   import FilterPanel from "./components/modules/FilterPanel.svelte";
   import {
-    media_store,
-    events_store,
-    ui_store,
-    filter_toggles,
-    platform_config_store,
-  } from "./stores/store";
-  import { localtoUTCdatetimeobj } from "./utils/utils";
-
+    fetch_platform_config,
+    fetch_events,
+    fetch_media_assets,
+  } from "./lib/api.js";
+  import { ui_store, platform_config_store } from "./stores/store";
   let mouse_xy = { x: 0, y: 0 };
   let handleMouseMove = throttle((event) => {
     mouse_xy.x = event.clientX;
@@ -30,205 +27,19 @@
   }, 500);
 
   onMount(() => {
-    let fetch_interval = setInterval(fetch_google_sheet_data, 10000);
-    let fetch_interval = setInterval(fetch_all_data, 10000);
-    return () => {
-      clearInterval(fetch_interval);
-    };
+    // let fetch_interval = setInterval(fetch_all_data, 10000);
+    // return () => {
+    //   clearInterval(fetch_interval);
+    // };
+    fetch_platform_config();
+    fetch_media_assets();
+    fetch_events();
   });
 
-  async function fetch_platform_config() {
-        return await fetch("/.netlify/functions/supabase?table=config")
-            .then((response) => response.json())
-            .then((platform_config) => {
-                $platform_config_store = platform_config[0]; // this is an array, so we need to get the first element
-            });
-    }
-
-   async function fetch_events() {
-        return await fetch("/.netlify/functions/supabase?table=events")
-            .then((response) => response.json())
-            .then((events) => {
-                process_events_data(events);
-            });
-    }
-
-   async function fetch_media_assets() {
-        return await fetch("/.netlify/functions/supabase?table=media_assets")
-            .then((response) => response.json())
-            .then((media_assets) => {
-                process_media_assets_data(media_assets);
-            });
-    }
-
-    // create array to feed data as being processed
-    let events = [];
-
-    // for every row (skipping the first row of column names)
-    rows.slice(1).forEach((row, i) => {
-      // create a video object
-      let event = {};
-      // for each column in row
-      row.forEach((col_value, i) => {
-        // assign the new object the column value under the correct key
-        event[column_names[i]] = col_value;
-      });
-
-      // date time string to datetime object
-      event.start_date_time = localtoUTCdatetimeobj(
-        new Date(event["datetime (yyyy-mm-dd hh:mm:ss)"])
-      );
-      //create 10 second block for each event
-      event.end_date_time = new Date(event.start_date_time.getTime() + 10000);
-      // event.className = "case" + event.case
-      event.start = event.start_date_time;
-      event.end = event.end_date_time;
-
-      var id = i + " event " + event.event;
-      event.id = id;
-      event.description = event["event"];
-
-      // add video object to data array
-      events.push(event);
-    });
-    if (JSON.stringify($events_store) !== JSON.stringify(events)) {
-      $events_store = events;
-    }
-  }
-
-  function process_video_sheet_response(rows) {
-    // first row of table is column names
-    let column_names = rows[0];
-    // create array to feed data as being processed
-    let new_videos = {};
-
-    // for every row (skipping the first row of column names)
-    rows.slice(1).forEach((row, r) => {
-      try {
-        // create a video object
-        let video = {};
-        // for each column in row
-        row.forEach((col_value, i) => {
-          // assign the new object the column value under the correct key
-
-          // if the col value a string boolean
-          if (col_value == "TRUE" || col_value == "FALSE") {
-            // transform string boolean to actual boolean
-            video[column_names[i]] = col_value == "TRUE";
-            // if boolean not already in filter_toggles (only need to do once on first row)
-            // and checkig if already in there prevents from re-adding + resetting to false
-            // at every sheet fetch
-            if (
-              r == 0 &&
-              !Object.keys($filter_toggles).includes(column_names[i])
-            ) {
-              $filter_toggles[column_names[i]] = false;
-            }
-          } else {
-            video[column_names[i]] = col_value;
-          }
-        });
-
-        // properties for map
-        if (
-          video[$platform_config_store["Title of column used for latitude"]] &&
-          video[$platform_config_store["Title of column used for longitude"]]
-        ) {
-          video.lat = parseFloat(
-            video[$platform_config_store["Title of column used for latitude"]]
-          );
-          video.long = parseFloat(
-            video[$platform_config_store["Title of column used for longitude"]]
-          );
-        }
-
-        // properties for timeline
-        video.type = "range";
-        video.label = video.UAR;
-        video.id = video.UAR;
-        video.url = $platform_config_store["Title of column used for url"];
-
-        // date time string to datetime object
-        if (
-          video[
-            $platform_config_store["Title of column used for chronolocation"]
-          ] &&
-          video[$platform_config_store["Title of column used for duration"]]
-        ) {
-          try {
-            video.duration =
-              video[
-                $platform_config_store["Title of column used for duration"]
-              ];
-            video.start = localtoUTCdatetimeobj(
-              new Date(
-                video[
-                  $platform_config_store[
-                    "Title of column used for chronolocation"
-                  ]
-                ]
-              )
-            );
-            let [length_hours, length_minutes, length_seconds] =
-              video[
-                $platform_config_store["Title of column used for duration"]
-              ].split(":");
-            video.end_date_time =
-              new Date(video.start).getTime() +
-              length_hours * 60 * 60 * 1000 +
-              length_minutes * 60 * 1000 +
-              length_seconds * 1000;
-            video.times = [
-              {
-                starting_time: new Date(video.start).getTime(),
-                ending_time: new Date(video.end_date_time).getTime(),
-              },
-            ];
-
-            video.end = video.end_date_time;
-          } catch {
-            console.log("conversion to datetime failed");
-            return;
-          }
-        }
-
-        // // properties for filter
-        // Object.entries($filter_toggles).forEach((pair) => {
-        //   let [toggle, value] = pair;
-        //   if (typeof value === "object") {
-        //     let responses = video[toggle];
-        //     if (responses == undefined) return;
-        //     responses = responses.replaceAll(" ", "");
-        //     responses
-        //       .split(",")
-        //       .filter((response) => {
-        //         return !["", " ", "NULL"].includes(response);
-        //       })
-        //       .forEach((response) => {
-        //         if (!Object.keys(value).includes(response)) {
-        //           value[response] = false;
-        //         }
-        //       });
-        //   }
-        //   $filter_toggles[toggle] = value;
-        // });
-
-        new_videos[video.UAR] = video;
-      } catch (error) {
-        console.log(error);
-      }
-    });
-
-    if (JSON.stringify($media_store) !== JSON.stringify(new_videos)) {
-      $media_store = new_videos;
-    }
-  }
-
-  // Takes datetime object created on local machine with time offset
-  // returns datetime object in UTC time when read by same local machine
-  function localtoUTCdatetimeobj(datetimeobj) {
-    let userTimezoneOffset = datetimeobj.getTimezoneOffset() * 60000;
-    return new Date(datetimeobj.getTime() - userTimezoneOffset);
+  async function fetch_all_data() {
+    await fetch_platform_config();
+    await fetch_media_assets();
+    await fetch_events();
   }
 </script>
 
@@ -248,7 +59,7 @@
     ? `var(--filtermenu-size)`
     : `0`} "
 >
-  {#await fetch_google_sheet_data()}
+  {#await fetch_all_data()}
     <div class="modal_container">
       <div class="box modal_content text_level2">
         fetching initial data from the spreadsheet...
